@@ -1,5 +1,5 @@
 {
-  "name": "todo-list",
+  "name": "todo-frontend",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -10,17 +10,22 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0"
+    "@tailwindcss/vite": "^4.0.8",
+    "axios": "^1.8.4",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
   },
   "devDependencies": {
     "@types/react": "^18.2.66",
     "@types/react-dom": "^18.2.22",
     "@vitejs/plugin-react": "^4.2.1",
+    "autoprefixer": "^10.4.20",
     "eslint": "^8.57.0",
     "eslint-plugin-react": "^7.34.1",
     "eslint-plugin-react-hooks": "^4.6.0",
     "eslint-plugin-react-refresh": "^0.4.6",
+    "postcss": "^8.5.3",
+    "tailwindcss": "^4.0.8",
     "vite": "^5.2.0"
   }
 }
