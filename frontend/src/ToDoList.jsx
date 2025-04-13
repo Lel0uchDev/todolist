@@ -10,7 +10,7 @@ function ToDoList() {
     const [editingTask, setEditingTask] = useState(null);
     const [editText, setEditText] = useState("");
     const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-    const [groups, setGroups] = useState([""]);
+    const [groups, setGroups] = useState([]);
     const [newGroup, setNewGroup] = useState("");
     const [selectedGroup, setSelectedGroup] = useState("All");
     const [editingGroup, setEditingGroup] = useState(null);
@@ -18,7 +18,17 @@ function ToDoList() {
 
     useEffect(() => {
         fetchTasks();
+        fetchGroups();
     }, []);
+
+    const fetchGroups = async () => {
+        try {
+            const response = await axios.get(`${API_URL}/groups`);
+            setGroups(response.data);
+        } catch (error) {
+            console.error('Error fetching groups:', error);
+        }
+    };
 
     const fetchTasks = async () => {
         try {
@@ -104,67 +114,68 @@ function ToDoList() {
         setEditGroupText(event.target.value);
     }
 
-    function addGroup() {
-        if (newGroup.trim() !== "" && !groups.includes(newGroup.trim())) {
-            setGroups([...groups, newGroup.trim()]);
-            setNewGroup("");
+    async function addGroup() {
+        if (newGroup.trim() !== "" && !groups.some(g => g.name === newGroup.trim())) {
+            try {
+                await axios.post(`${API_URL}/groups`, { name: newGroup.trim() });
+                await fetchGroups();
+                setNewGroup("");
+            } catch (error) {
+                console.error('Error adding group:', error);
+            }
         }
     }
 
-    function deleteGroup(group) {
+    async function deleteGroup(group) {
         if (group !== "All") {
-            setGroups(groups.filter(g => g !== group));
-            if (selectedGroup === group) {
-                setSelectedGroup("All");
-            }
-            // Delete all tasks in this group
-            tasks.forEach(task => {
-                if (task.group === group) {
-                    deleteTask(task._id);
+            try {
+                await axios.delete(`${API_URL}/groups/${group._id}`);
+                await fetchGroups();
+                if (selectedGroup === group.name) {
+                    setSelectedGroup("All");
                 }
-            });
+            } catch (error) {
+                console.error('Error deleting group:', error);
+            }
         }
     }
 
     function startEditingGroup(group) {
         setEditingGroup(group);
-        setEditGroupText(group);
+        setEditGroupText(group.name);
     }
 
-    function saveGroupEdit() {
-        if (editGroupText.trim() !== "" && !groups.includes(editGroupText.trim())) {
-            const newGroups = groups.map(g => g === editingGroup ? editGroupText.trim() : g);
-            setGroups(newGroups);
-            if (selectedGroup === editingGroup) {
-                setSelectedGroup(editGroupText.trim());
-            }
-            // Update all tasks in this group
-            tasks.forEach(task => {
-                if (task.group === editingGroup) {
-                    axios.put(`${API_URL}/tasks/${task._id}`, { 
-                        text: task.text,
-                        group: editGroupText.trim()
-                    });
+    async function saveGroupEdit() {
+        if (editGroupText.trim() !== "" && !groups.some(g => g.name === editGroupText.trim())) {
+            try {
+                await axios.put(`${API_URL}/groups/${editingGroup._id}`, { name: editGroupText.trim() });
+                await fetchGroups();
+                if (selectedGroup === editingGroup.name) {
+                    setSelectedGroup(editGroupText.trim());
                 }
-            });
-            setEditingGroup(null);
-            setEditGroupText("");
+                setEditingGroup(null);
+                setEditGroupText("");
+            } catch (error) {
+                console.error('Error saving group edit:', error);
+            }
         }
     }
 
-    function moveGroupUp(index) {
-        if (index > 0) {
-            const newGroups = [...groups];
-            [newGroups[index], newGroups[index - 1]] = [newGroups[index - 1], newGroups[index]];
-            setGroups(newGroups);
+    async function moveGroupUp(group) {
+        try {
+            await axios.put(`${API_URL}/groups/${group._id}/move`, { direction: 'up' });
+            await fetchGroups();
+        } catch (error) {
+            console.error('Error moving group up:', error);
         }
     }
 
-    function moveGroupDown(index) {
-        if (index < groups.length - 1) {
-            const newGroups = [...groups];
-            [newGroups[index], newGroups[index + 1]] = [newGroups[index + 1], newGroups[index]];
-            setGroups(newGroups);
+    async function moveGroupDown(group) {
+        try {
+            await axios.put(`${API_URL}/groups/${group._id}/move`, { direction: 'down' });
+            await fetchGroups();
+        } catch (error) {
+            console.error('Error moving group down:', error);
         }
     }
 
@@ -234,13 +245,13 @@ function ToDoList() {
                             All Tasks
                         </button>
                         {groups.map((group, index) => (
-                            <div key={group} className="group relative">
-                                {editingGroup === group ? (
+                            <div key={group._id} className="group relative">
+                                {editingGroup?._id === group._id ? (
                                     <div className="flex gap-2">
                                         <input
                                             type="text"
                                             value={editGroupText}
-                                            onChange={handleEditGroupInputChange}
+                                            onChange={(e) => setEditGroupText(e.target.value)}
                                             className="flex-1 px-3 py-1 border border-blue-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                                         />
                                         <button
@@ -262,21 +273,21 @@ function ToDoList() {
                                 ) : (
                                     <div className="flex items-center">
                                         <button
-                                            onClick={() => setSelectedGroup(group)}
-                                            className={`flex-1 text-left px-3 py-2 rounded-lg ${selectedGroup === group ? 'bg-blue-100 text-blue-800' : 'text-gray-700 hover:bg-gray-100'}`}
+                                            onClick={() => setSelectedGroup(group.name)}
+                                            className={`flex-1 text-left px-3 py-2 rounded-lg ${selectedGroup === group.name ? 'bg-blue-100 text-blue-800' : 'text-gray-700 hover:bg-gray-100'}`}
                                         >
-                                            {group}
+                                            {group.name}
                                         </button>
                                         <div className="absolute right-0 top-0 h-full flex items-center opacity-0 group-hover:opacity-100 transition-opacity">
                                             <button
-                                                onClick={() => moveGroupUp(index)}
+                                                onClick={() => moveGroupUp(group)}
                                                 className="p-1 text-blue-600 hover:bg-blue-100 rounded-lg disabled:opacity-30 disabled:cursor-not-allowed"
                                                 disabled={index === 0}
                                             >
                                                 ↑
                                             </button>
                                             <button
-                                                onClick={() => moveGroupDown(index)}
+                                                onClick={() => moveGroupDown(group)}
                                                 className="p-1 text-blue-600 hover:bg-blue-100 rounded-lg disabled:opacity-30 disabled:cursor-not-allowed"
                                                 disabled={index === groups.length - 1}
                                             >
